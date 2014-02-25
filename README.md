@@ -6,12 +6,10 @@ Python scripts to build essential networks of text files in specified directory.
 Reference Packages and Tools
 ============================
 
-Stanford CoreNLP: http://nlp.stanford.edu/software/corenlp.shtml
-Stanford Name Entity Recognizer: http://nlp.stanford.edu/software/CRF-NER.shtml
-corenlp-python: The Python interface for the [Stanford CoreNLP]
-(https://github.com/dasmith/stanford-corenlp-python)
-PyNER: The Python interface to the [Stanford Named Entity Recognizer]
-(https://github.com/dat/stanford-ner)
+* Stanford CoreNLP: http://nlp.stanford.edu/software/corenlp.shtml
+* Stanford Named Entity Recognizer: http://nlp.stanford.edu/software/CRF-NER.shtml
+* corenlp-python: The Python interface for the [Stanford CoreNLP] (https://github.com/dasmith/stanford-corenlp-python)
+* PyNER: The Python interface to the [Stanford Named Entity Recognizer] (https://github.com/dat/stanford-ner)
 
 
 Note
