@@ -1,0 +1,52 @@
+Metadata-Version: 1.1
+Name: ner
+Version: 0.1
+Summary: Python client for the Stanford Named Entity Recognizer
+Home-page: http://github.com/dat/pyner
+Author: Dat Hoang
+Author-email: dat.hoang@gmail.com
+License: BSD
+Description: # PyNER 
+        
+        The Python interface to the [Stanford Named Entity Recognizer](https://github.com/dat/stanford-ner).
+        
+        ## Project Homepage
+        
+        * [Stanford Named Entity Recognizer](http://nlp.stanford.edu/software/CRF-NER.shtml)
+        
+        ## Installation
+        
+            $ python setup.py install
+        
+        ## Basic Usage
+        
+            >>> import ner
+            >>> tagger = ner.HttpNER(host='localhost', port=8080)
+            >>> tagger.get_entities("University of California is located in California, United States")
+            {'LOCATION': ['California', 'United States'],
+             'ORGANIZATION': ['University of California']}
+            >>> tagger.json_entities("Alice went to the Museum of Natural History.")
+            '{"ORGANIZATION": ["Museum of Natural History"], "PERSON": ["Alice"]}'
+        
+        ## Online Demo
+        
+        * [Graphical demo of several models](http://nlp.stanford.edu:8080/ner/)
+        
+        ## License
+        
+        BSD License
+        
+        ## Author
+        
+        PyNER is developed by maintained by Dat Hoang.
+        It can be found here: http://github.com/dat/pyner
+        
+        
+Keywords: ner,stanford named entity recognizer,stanford named entity tagger
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
