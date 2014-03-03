@@ -49,7 +49,7 @@ import itertools
 """
 
 __author__ = "Bowen Lou, Knowledge Lab | Computation Institute"
-__version__ = "v0.1"
+__version__ = "v1.1"
 
 
 def preprocessSent(file_content):
@@ -262,28 +262,26 @@ def processDirectory(dir_path, top_number, edge_distance_flag, node_norm_flag, e
             for v, d in cross_graph.nodes(data = True):
                 if v in single_graph.nodes():
                     d['freq'] += single_graph.node[v]['freq']
-            
-            if edge_distance_flag:
-                for u, v, d in cross_graph.edges(data = True):
+        
+            for u, v, d in cross_graph.edges(data = True):
+                if edge_distance_flag:
                     if (u,v) in single_graph.edges():
                         if d['freq'] == 0:
-                            cross_len = 0
+                            cross_dist = 0
                         else:
-                            cross_len = 1.0 / d['freq']
-                        single_graph_len = 1.0 / single_graph[u][v]['freq']
-                        cross_len += single_graph_len
-                        d['freq'] = 1.0 / cross_len
+                            cross_dist = 1.0 / d['freq']
+                        single_graph_dist = 1.0 / single_graph[u][v]['freq']
+                        cross_dist += single_graph_dist
+                        d['freq'] = 1.0 / cross_dist
                     elif (v, u) in single_graph.edges():
                         if d['freq'] == 0:
-                            cross_len = 0
+                            cross_dist = 0
                         else:
-                            cross_len = 1.0 / d['freq']
-                        single_graph_len = 1.0 / single_graph[v][u]['freq']
-                        cross_len += single_graph_len
-                        d['freq'] = 1.0 / cross_len
-                        
-            else:
-                for u, v, d in cross_graph.edges(data = True):
+                            cross_dist = 1.0 / d['freq']
+                        single_graph_dist = 1.0 / single_graph[v][u]['freq']
+                        cross_dist += single_graph_dist
+                        d['freq'] = 1.0 / cross_dist
+                else:
                     if (u, v) in single_graph.edges():
                         d['freq'] += single_graph[u][v]['freq']
                     elif (v, u) in single_graph.edges():
