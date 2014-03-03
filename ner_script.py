@@ -16,19 +16,19 @@ import itertools
 # from nltk.stem.wordnet import WordNetLemmatizer
 
 """
-    This script will process a bunch of files in the input directory, and generate name entity graph of the corresponding file and finally build a combined graph of all these files. Also analysis files are generated.
+    This script will process a bunch of files in the input directory, and generate named entity graph of the corresponding file and finally build a combined graph of all these files. Also analysis files are generated.
     
-    usage: ner_script.py [-h] [-t TOP_NUMBER] [-n] [-e] dir_path
+    usage: ner_script.py [-h] [-t TOP_NUMBER] [-d] [-n] [-e] dir_path
     
     positional arguments:
     dir_path              input directory path
     
     optional arguments:
     -h, --help            show this help message and exit
-    -t TOP_NUMBER, --top_number TOP_NUMBER
-                          input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. default is 10
+    -t TOP_NUMBER, --top_number TOP_NUMBER  
+                          input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. Also process closeness centrality and betweenness centrality analysis if edge weight is in distance. default is 10
     -d, --edge_distance   consider edge distance in the edge attribute
-    -n, --no_node_frequency_normalization   
+    -n, --no_node_frequency_normalization
                           not to consider normalizing node frequencies when finding NE pair
     -e, --no_edge_attribute_normalization   
                           not to consider normalizing edge attribute when finding NE pair
@@ -64,12 +64,12 @@ def preprocessSent(file_content):
     sent_seg = [sent.encode('ascii', 'ignore') for sent in sent_seg]
     return sent_seg
 
-def produceNameEntity(list_sent):
+def produceNamedEntity(list_sent):
     """
         input:
             list of sentences in the file
         return:
-            list of all the name entities in the file
+            list of all the named entities in the file
     """
     
     # lmtzr = WordNetLemmatizer()
@@ -92,16 +92,16 @@ def produceNameEntity(list_sent):
 def countWordFreq(list_ne):
     """
         input:
-            list of name entities in the file
+            list of named entities in the file
         return:
-            a dictionary in which the key is the name entity and the value is the frequency of the name entity in the input
+            a dictionary in which the key is the named entity and the value is the frequency of the named entity in the input
     """
     ne_freq_count_dict = dict((ne, list_ne.count(ne)) for ne in list_ne)
     return ne_freq_count_dict
 
 def drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name):
     """
-        Draw and save the complete name entity graph of each file in the directory
+        Draw and save the complete named entity graph of each file in the directory
     """
     # modify complete_graph method from http://networkx.github.io/documentation/latest/_modules/networkx/generators/classic.html#complete_graph
 
@@ -132,7 +132,6 @@ def drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name):
     else:
         if not os.path.exists(dir_path + 'ner/edge_weight/'):
             os.makedirs(dir_path + 'ner/edge_weight/')
-            nx.write_pajek(ne_graph, dir_path + 'ner/edge_weight/' + file_name + '_ner.net')
         nx.write_pajek(ne_graph, dir_path + 'ner/edge_weight/' + file_name + '_ner.net')
 
     return ne_graph
@@ -152,7 +151,6 @@ def graphAnalysis(graph, top_number, edge_distance_flag, save_file_path):
             top_deg_central_sort.append((' '.join(ne_deg[0]), ne_deg[1]))
         save_file.write('top %d degree centrality items,' % top_number)
         save_file.write(','.join('%s %s' % x for x in top_deg_central_sort))
-        
         
         if edge_distance_flag:
             # closeness centrality
@@ -253,7 +251,7 @@ def processDirectory(dir_path, top_number, edge_distance_flag, node_norm_flag, e
             sent_seg = preprocessSent(file_open.read())
             file_open.close()
             
-            list_ne = produceNameEntity(sent_seg)
+            list_ne = produceNamedEntity(sent_seg)
             single_graph = drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name)
 
             cross_graph.add_nodes_from([v for v, d in single_graph.nodes(data = True) if v not in cross_graph.nodes()], freq = 0)
@@ -342,7 +340,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dir_path', help = 'input directory path')
     # optional
-    parser.add_argument('-t', '--top_number', default = 10, help = 'input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. default is 10', type = int)
+    parser.add_argument('-t', '--top_number', default = 10, help = 'input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. Also process closeness centrality and betweenness centrality analysis if edge weight is in distance. default is 10', type = int)
     parser.add_argument('-d','--edge_distance', help = 'consider edge distance in the edge attribute', action = 'store_true')
     parser.add_argument('-n', '--no_node_frequency_normalization', help = 'not to consider normalizing node frequencies when finding NE pair', action = 'store_true')
     parser.add_argument('-e','--no_edge_attribute_normalization', help = 'not to consider normalizing edge attribute when finding NE pair', action = 'store_true')
