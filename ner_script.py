@@ -27,22 +27,24 @@ import itertools
     -h, --help            show this help message and exit
     -t TOP_NUMBER, --top_number TOP_NUMBER
                           input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. default is 10
-    -n, --no_node_frequency_normalization 
+    -d, --edge_distance   consider edge distance in the edge attribute
+    -n, --no_node_frequency_normalization   
                           not to consider normalizing node frequencies when finding NE pair
-    -e, --no_edge_weight_normalization 
-                          not to consider normalizing edge weights when finding NE pair
+    -e, --no_edge_attribute_normalization   
+                          not to consider normalizing edge attribute when finding NE pair
+
 
     input:
     1. The path to a directory of text files to be analyzed individually and as a collection.
     2. An integer, defining the number of top-scoring nodes (or edges) for which to report various analysis (for example, the top 10 most central nodes in the graph). Default is 10.
-    3. A Boolean, specifying whether or not to normalize the node-frequencies in the final combined graph. Default is to normalize.
-    4. A Boolean, specifying whether or not to normalize the edge-weights in the final combined graph. Default is to normalize.
+    3. A Boolean, specifying whether or not to assign the edge distance to edge attribute in the final combined graph. Default is not to assign.
+    4. A Boolean, specifying whether or not to normalize the node-frequencies in the final combined graph. Default is to normalize.
+    5. A Boolean, specifying whether or not to normalize the edge attribute in the final combined graph. Default is to normalize.
     
     output:
     1. A .pajek graph file for each file in the input directory.
     2. A .pajek graph file for the combined graph (summing node and edge frequencies in the way we set)
     3. A CSV reporting the top <TOP_NUMBER> highest-scoring elements (nodes or edges) for the essential analyses
-    4. A CSV reporting each community detection algorithm, defining all the communities that were found. This should include the term (NE), its type and its community membership.
 
 """
 
@@ -56,10 +58,9 @@ def preprocessSent(file_content):
             content in the file to be processed
         return:
             segmented sentences of the input file
-        
-        """
+    """
     sent_seg = nltk.sent_tokenize(file_content)
-    # omit some special character which can not decoded in ascii and omit punctuation
+    # omit some special character which can not be encoded in ascii and omit punctuation
     sent_seg = [sent.encode('ascii', 'ignore') for sent in sent_seg]
     return sent_seg
 
@@ -86,7 +87,6 @@ def produceNameEntity(list_sent):
                     for word in list_word:
                         if len(word) > 2:
                             list_ne.append((str(word.lower()), str(entity)))
-
     return list_ne
 
 def countWordFreq(list_ne):
@@ -99,7 +99,7 @@ def countWordFreq(list_ne):
     ne_freq_count_dict = dict((ne, list_ne.count(ne)) for ne in list_ne)
     return ne_freq_count_dict
 
-def drawCompleteNEGraph(list_ne, dir_path, file_name):
+def drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name):
     """
         Draw and save the complete name entity graph of each file in the directory
     """
@@ -112,17 +112,32 @@ def drawCompleteNEGraph(list_ne, dir_path, file_name):
     
     if len(list_ne) > 1:
         edges = itertools.combinations(list_ne, 2)
-        for edge in edges:
-            if edge[0] != edge[1]:
-                ne_graph.add_edge(edge[0], edge[1], freq = 1)
+        if edge_distance_flag:
+            for edge in edges:
+                if edge[0] != edge[1]:
+                    edge_len = 1.0 / min(ne_freq_count_dict[edge[0]], ne_freq_count_dict[edge[1]])
+                    ne_graph.add_edge(edge[0], edge[1], freq = edge_len)
+        else:
+            for edge in edges:
+                if edge[0] != edge[1]:
+                    ne_graph.add_edge(edge[0], edge[1], freq = 1)
 
     if not os.path.exists(dir_path + 'ner/'):
         os.makedirs(dir_path + 'ner/')
 
-    nx.write_pajek(ne_graph, dir_path + 'ner/' + file_name + '_ner.net')
+    if edge_distance_flag:
+        if not os.path.exists(dir_path + 'ner/edge_dist/'):
+            os.makedirs(dir_path + 'ner/edge_dist/')
+        nx.write_pajek(ne_graph, dir_path + 'ner/edge_dist/' + file_name + '_ner.net')
+    else:
+        if not os.path.exists(dir_path + 'ner/edge_weight/'):
+            os.makedirs(dir_path + 'ner/edge_weight/')
+            nx.write_pajek(ne_graph, dir_path + 'ner/edge_weight/' + file_name + '_ner.net')
+        nx.write_pajek(ne_graph, dir_path + 'ner/edge_weight/' + file_name + '_ner.net')
+
     return ne_graph
 
-def graphAnalysis(graph, top_number, save_file_path):
+def graphAnalysis(graph, top_number, edge_distance_flag, save_file_path):
     """
         Do the essential analysis to the final combined graph
     """
@@ -137,6 +152,26 @@ def graphAnalysis(graph, top_number, save_file_path):
             top_deg_central_sort.append((' '.join(ne_deg[0]), ne_deg[1]))
         save_file.write('top %d degree centrality items,' % top_number)
         save_file.write(','.join('%s %s' % x for x in top_deg_central_sort))
+        
+        
+        if edge_distance_flag:
+            # closeness centrality
+            close_central = nx.closeness_centrality(graph, distance = 'freq')
+            close_central_sort = sorted(close_central.items(), key = lambda x: x[1], reverse = True)
+            top_close_central_sort = []
+            for ne_close in close_central_sort[:top_number]:
+                top_close_central_sort.append((' '.join(ne_close[0]), ne_close[1]))
+            save_file.write('\ntop %d closeness centrality items,' % top_number)
+            save_file.write(','.join('%s %s' % x for x in top_close_central_sort))
+    
+            # betweenness centrality
+            between_central = nx.betweenness_centrality(graph, weight = 'freq')
+            between_central_sort = sorted(between_central.items(), key = lambda x: x[1], reverse = True)
+            top_between_central_sort = []
+            for ne_between in between_central_sort[:top_number]:
+                top_between_central_sort.append((' '.join(ne_between[0]), ne_between[1]))
+            save_file.write('\ntop %d betweenness centrality items,' % top_number)
+            save_file.write(','.join('%s %s' % x for x in top_between_central_sort))
         
         # clustering
         
@@ -185,19 +220,24 @@ def graphAnalysis(graph, top_number, save_file_path):
             write_all_clique_sort.append(clique_string)
         save_file.write(','.join(x for x in write_all_clique_sort))
 
-def processDirectory(dir_path, top_number, node_norm_flag, edge_norm_flag):
+def processDirectory(dir_path, top_number, edge_distance_flag, node_norm_flag, edge_norm_flag):
     """
         Process the directory the user inputs
     """
+    if edge_distance_flag:
+        print "EDGE ATTRIBUTE IS EDGE DISTANCE"
+    else:
+        print "EDGE ATTRIBUTE IS EDGE WEIGHT"
+    
     if (not node_norm_flag):
         print "NO NODE FREQUENCY NORMALIZATION"
     else:
         print "NODE FREQUENCY NORMALIZATION: Divide each node frequency by the sum of all frequencies"
 
     if (not edge_norm_flag):
-        print "NO EDGE WEIGHT NORMALIZATION"
+        print "NO EDGE ATTRIBUTE NORMALIZATION"
     else:
-        print "EDGE WEIGHT NORMALIZATION: Divide each edge weight by the sum of all weights"
+        print "EDGE ATTRIBUTE NORMALIZATION: Divide each edge attribute by the sum of all attribute value"
 
     cross_graph = nx.Graph()
 
@@ -214,7 +254,7 @@ def processDirectory(dir_path, top_number, node_norm_flag, edge_norm_flag):
             file_open.close()
             
             list_ne = produceNameEntity(sent_seg)
-            single_graph = drawCompleteNEGraph(list_ne, dir_path, file_name)
+            single_graph = drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name)
 
             cross_graph.add_nodes_from([v for v, d in single_graph.nodes(data = True) if v not in cross_graph.nodes()], freq = 0)
             cross_graph.add_edges_from([(u, v) for u, v, d in single_graph.edges(data = True) if (u, v) not in cross_graph.edges()], freq = 0)
@@ -222,40 +262,80 @@ def processDirectory(dir_path, top_number, node_norm_flag, edge_norm_flag):
             for v, d in cross_graph.nodes(data = True):
                 if v in single_graph.nodes():
                     d['freq'] += single_graph.node[v]['freq']
-            for u, v, d in cross_graph.edges(data = True):
-                if (u, v) in single_graph.edges():
-                    d['freq'] += single_graph[u][v]['freq']
-                elif (v, u) in single_graph.edges():
-                    d['freq'] += single_graph[v][u]['freq']
+            
+            if edge_distance_flag:
+                for u, v, d in cross_graph.edges(data = True):
+                    if (u,v) in single_graph.edges():
+                        if d['freq'] == 0:
+                            cross_len = 0
+                        else:
+                            cross_len = 1.0 / d['freq']
+                        single_graph_len = 1.0 / single_graph[u][v]['freq']
+                        cross_len += single_graph_len
+                        d['freq'] = 1.0 / cross_len
+                    elif (v, u) in single_graph.edges():
+                        if d['freq'] == 0:
+                            cross_len = 0
+                        else:
+                            cross_len = 1.0 / d['freq']
+                        single_graph_len = 1.0 / single_graph[v][u]['freq']
+                        cross_len += single_graph_len
+                        d['freq'] = 1.0 / cross_len
+                        
+            else:
+                for u, v, d in cross_graph.edges(data = True):
+                    if (u, v) in single_graph.edges():
+                        d['freq'] += single_graph[u][v]['freq']
+                    elif (v, u) in single_graph.edges():
+                        d['freq'] += single_graph[v][u]['freq']
 
     sum_node_freq = 0
     for v, d in cross_graph.nodes(data = True):
         sum_node_freq += d['freq']
     
-    sum_edge_weight = 0
+    sum_edge_attribute = 0
     for u, v, d in cross_graph.edges(data = True):
-        sum_edge_weight += d['freq']
+        sum_edge_attribute += d['freq']
 
     if node_norm_flag and edge_norm_flag:
         for v, d in cross_graph.nodes(data = True):
             d['freq'] /= sum_node_freq
         for u, v, d in cross_graph.edges(data = True):
-            d['freq'] /= sum_edge_weight
-        nx.write_pajek(cross_graph, dir_path + 'ner/' + 'ne_graph_cross_txt_all_normalization.net')
-        graphAnalysis(cross_graph, top_number, dir_path + 'ner/' + 'ne_graph_all_normalization_analysis.csv')
+            d['freq'] /= sum_edge_attribute
+            
+        if edge_distance_flag:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_dist/' + 'ne_graph_cross_txt_all_norm_edge_dist.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_dist/' + 'ne_graph_all_norm_edge_dist_analysis.csv')
+        else:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_weight/' + 'ne_graph_cross_txt_all_norm_edge_weight.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_weight/' + 'ne_graph_all_norm_edge_weight_analysis.csv')
     elif node_norm_flag and not edge_norm_flag:
         for v, d in cross_graph.nodes(data = True):
             d['freq'] /= sum_node_freq
-        nx.write_pajek(cross_graph, dir_path + 'ner/' + 'ne_graph_cross_txt_node_normalization.net')
-        graphAnalysis(cross_graph, top_number, dir_path + 'ner/' + 'ne_graph_node_normalization_analysis.csv')
+            
+        if edge_distance_flag:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_dist/' + 'ne_graph_cross_txt_node_norm_edge_dist.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_dist/' + 'ne_graph_node_norm_edge_dist_analysis.csv')
+        else:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_weight/' + 'ne_graph_cross_txt_node_norm_edge_weight.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_weight/' + 'ne_graph_node_norm_edge_weight_analysis.csv')
     elif not node_norm_flag and edge_norm_flag:
         for u, v, d in cross_graph.edges(data = True):
-            d['freq'] /= sum_edge_weight
-        nx.write_pajek(cross_graph, dir_path + 'ner/' + 'ne_graph_cross_txt_edge_normalization.net')
-        graphAnalysis(cross_graph, top_number, dir_path + 'ner/' + 'ne_graph_edge_normalization_analysis.csv')
+            d['freq'] /= sum_edge_attribute
+        
+        if edge_distance_flag:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_dist/' + 'ne_graph_cross_txt_edge_norm_edge_dist.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_dist/' + 'ne_graph_edge_norm_edge_dist_analysis.csv')
+        else:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_weight/' + 'ne_graph_cross_txt_edge_norm_edge_weight.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_weight/' + 'ne_graph_edge_norm_edge_weight_analysis.csv')
     else:
-        nx.write_pajek(cross_graph, dir_path + 'ner/' + 'ne_graph_cross_txt_no_normalization.net')
-        graphAnalysis(cross_graph, top_number, dir_path + 'ner/' + 'ne_graph_no_normalization_analysis.csv')
+        if edge_distance_flag:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_dist/' + 'ne_graph_cross_txt_no_norm_edge_dist.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_dist/' + 'ne_graph_no_norm_edge_dist_analysis.csv')
+        else:
+            nx.write_pajek(cross_graph, dir_path + 'ner/edge_weight/' + 'ne_graph_cross_txt_no_norm_edge_weight.net')
+            graphAnalysis(cross_graph, top_number, edge_distance_flag, dir_path + 'ner/edge_weight/' + 'ne_graph_no_norm_edge_weight_analysis.csv')
 
 def main():
     """
@@ -265,9 +345,10 @@ def main():
     parser.add_argument('dir_path', help = 'input directory path')
     # optional
     parser.add_argument('-t', '--top_number', default = 10, help = 'input integer defining <TOP_NUMBER> top-scoring degree centrality, clustering and clique analysis. default is 10', type = int)
+    parser.add_argument('-d','--edge_distance', help = 'consider edge distance in the edge attribute', action = 'store_true')
     parser.add_argument('-n', '--no_node_frequency_normalization', help = 'not to consider normalizing node frequencies when finding NE pair', action = 'store_true')
-    parser.add_argument('-e','--no_edge_weight_normalization', help = 'not to consider normalizing edge weights when finding NE pair', action = 'store_true')
-
+    parser.add_argument('-e','--no_edge_attribute_normalization', help = 'not to consider normalizing edge attribute when finding NE pair', action = 'store_true')
+    
     args = parser.parse_args()
     dir_path = args.dir_path
     top_number = args.top_number
@@ -283,18 +364,23 @@ def main():
             print 'NO TEXT FILE IN SUCH DIRECTORY! PLEASE INPUT ANOTHER DIRECTORY WITH TEXT FILES'
             sys.exit(1)
     
+    if args.edge_distance:
+        edge_distance_flag = True
+    else:
+        edge_distance_flag = False
+    
     if args.no_node_frequency_normalization:
         node_norm_flag = False
     else:
         node_norm_flag = True
 
-    if args.no_edge_weight_normalization:
+    if args.no_edge_attribute_normalization:
         edge_norm_flag = False
     else:
         edge_norm_flag = True
 
     program_start = time.clock()
-    processDirectory(dir_path, top_number, node_norm_flag, edge_norm_flag)
+    processDirectory(dir_path, top_number, edge_distance_flag, node_norm_flag, edge_norm_flag)
     program_end = time.clock()
     print 'DONE'
     # print 'Running time of the program is: %.2fs' % (program_end - program_start)
@@ -302,9 +388,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
 
