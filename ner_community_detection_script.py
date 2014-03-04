@@ -142,7 +142,9 @@ def graphCommunityAnalysis(analysis_graph, edge_distance_flag, dir_path, list_an
             
         with io.open(dir_path + 'ner_community_variation/edge_dist/' + 'text' + str(file_index) + '.txt', 'wb') as save_file:
             save_file.write('analysis text:\n' + ','.join(list_analysis_file) + '\n')
-            save_file.write('community:\n')
+            save_file.write('modularity:\n')
+            save_file.write('%f' % analysis_graph.modularity(cl_infomap))
+            save_file.write('\ncommunity:\n')
             for community_index, cl_community in enumerate(list_cl_community):
                 save_file.write('c' + str(community_index + 1) + ' ' + ','.join(cl_community) + '\n')
     
@@ -162,7 +164,9 @@ def graphCommunityAnalysis(analysis_graph, edge_distance_flag, dir_path, list_an
     
         with io.open(dir_path + 'ner_community_variation/edge_weight/' + 'text' + str(file_index) + '.txt', 'wb') as save_file:
             save_file.write('analysis text:\n' + ','.join(list_analysis_file) + '\n')
-            save_file.write('community:\n')
+            save_file.write('modularity:\n')
+            save_file.write('%f' % analysis_graph.modularity(cl_optimal_modularity))
+            save_file.write('\ncommunity:\n')
             for community_index, cl_community in enumerate(list_cl_community):
                 save_file.write('c' + str(community_index + 1) + ' ' + ','.join(cl_community) + '\n')
         
