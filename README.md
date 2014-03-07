@@ -8,7 +8,7 @@ Reference Packages and Tools
 
 * Stanford CoreNLP: http://nlp.stanford.edu/software/corenlp.shtml
 * Stanford Named Entity Recognizer: http://nlp.stanford.edu/software/CRF-NER.shtml
-* [corenlp-python] (https://github.com/dasmith/stanford-corenlp-python): The Python interface for the Stanford CoreNLP
+* [corenlp-python] (https://bitbucket.org/torotoki/corenlp-python): The Python interface for the Stanford CoreNLP
 * [PyNER] (https://github.com/dat/stanford-ner): The Python interface to the Stanford Named Entity Recognizer
 
 
