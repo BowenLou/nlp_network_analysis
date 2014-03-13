@@ -255,7 +255,7 @@ def processDirectory(dir_path, top_number, edge_distance_flag, node_norm_flag, e
             single_graph = drawCompleteNEGraph(list_ne, edge_distance_flag, dir_path, file_name)
 
             cross_graph.add_nodes_from([v for v, d in single_graph.nodes(data = True) if v not in cross_graph.nodes()], freq = 0)
-            cross_graph.add_edges_from([(u, v) for u, v, d in single_graph.edges(data = True) if (u, v) not in cross_graph.edges()], freq = 0)
+            cross_graph.add_edges_from([(u, v) for u, v, d in single_graph.edges(data = True) if (u, v) not in cross_graph.edges() and (v, u) not in cross_graph.edges()], freq = 0)
 
             for v, d in cross_graph.nodes(data = True):
                 if v in single_graph.nodes():
